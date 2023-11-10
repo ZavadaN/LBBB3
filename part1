@@ -1,0 +1,264 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import ElasticNet, Lasso, Ridge
+
+# Загрузка данных
+data = pd.read_csv("C:/000/housing.csv")
+Y = data['Y']
+X = data.drop('Y', axis=1)
+
+# Разделение данных на тренировочный и тестовый наборы
+x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=123)
+
+# Стандартизация данных
+scaler = StandardScaler()
+x_train = scaler.fit_transform(x_train)
+x_test = scaler.transform(x_test)
+
+# Функция для подбора оптимального значения параметра lambda
+def find_best_lambda(x_train, y_train, x_test, y_test, reg_type, rho=0.1):
+    lambdas = np.logspace(-5, 10, 15)
+    train_mse = []
+    test_mse = []
+    for l in lambdas:
+        if reg_type == "L1":
+            model = Lasso(alpha=l)
+        elif reg_type == "L2":
+            model = Ridge(alpha=l)
+        elif reg_type == "ElasticNet":
+            model = ElasticNet(alpha=l, l1_ratio=rho)
+        
+        model.fit(x_train, y_train)
+        train_predictions = model.predict(x_train)
+        test_predictions = model.predict(x_test)
+        train_mse.append(np.mean((y_train - train_predictions)**2))
+        test_mse.append(np.mean((y_test - test_predictions)**2))
+    
+    return lambdas, train_mse, test_mse
+
+# Подбор оптимального lambda для L1 регуляризации
+lambdas_l1, train_mse_l1, test_mse_l1 = find_best_lambda(x_train, y_train, x_test, y_test, "L1")
+
+# Подбор оптимального lambda для L2 регуляризации
+lambdas_l2, train_mse_l2, test_mse_l2 = find_best_lambda(x_train, y_train, x_test, y_test, "L2")
+
+# Подбор оптимального lambda для ElasticNet регуляризации
+lambdas_en, train_mse_en, test_mse_en = find_best_lambda(x_train, y_train, x_test, y_test, "ElasticNet")
+
+# Визуализация результатов подбора lambda
+plt.figure(figsize=(12, 6))
+plt.subplot(131)
+plt.plot(np.log10(lambdas_l1), train_mse_l1, label='Train MSE')
+plt.plot(np.log10(lambdas_l1), test_mse_l1, label='Test MSE')
+plt.xlabel('log10(lambda)')
+plt.ylabel('MSE')
+plt.title('L1 Regularization')
+plt.legend()
+
+plt.subplot(132)
+plt.plot(np.log10(lambdas_l2), train_mse_l2, label='Train MSE')
+plt.plot(np.log10(lambdas_l2), test_mse_l2, label='Test MSE')
+plt.xlabel('log10(lambda)')
+plt.ylabel('MSE')
+plt.title('L2 Regularization')
+plt.legend()
+
+plt.subplot(133)
+plt.plot(np.log10(lambdas_en), train_mse_en, label='Train MSE')
+plt.plot(np.log10(lambdas_en), test_mse_en, label='Test MSE')
+plt.xlabel('log10(lambda)')
+plt.ylabel('MSE')
+plt.title('ElasticNet Regularization')
+plt.legend()
+
+plt.tight_layout()
+plt.show()
+
+# Выбор оптимальных lambda
+best_lambda_l1 = lambdas_l1[np.argmin(test_mse_l1)]
+best_lambda_l2 = lambdas_l2[np.argmin(test_mse_l2)]
+best_lambda_en = lambdas_en[np.argmin(test_mse_en)]
+
+# Обучение моделей с оптимальными lambda
+model_l1 = Lasso(alpha=best_lambda_l1)
+model_l2 = Ridge(alpha=best_lambda_l2)
+model_en = ElasticNet(alpha=best_lambda_en, l1_ratio=0.1)
+
+model_l1.fit(x_train, y_train)
+model_l2.fit(x_train, y_train)
+model_en.fit(x_train, y_train)
+
+# Оценка MSE для тренировочных и тестовых данных
+train_mse_l1 = np.mean((y_train - model_l1.predict(x_train))**2)
+test_mse_l1 = np.mean((y_test - model_l1.predict(x_test))**2)
+
+train_mse_l2 = np.mean((y_train - model_l2.predict(x_train))**2)
+test_mse_l2 = np.mean((y_test - model_l2.predict(x_test))**2)
+
+train_mse_en = np.mean((y_train - model_en.predict(x_train))**2)
+test_mse_en = np.mean((y_test - model_en.predict(x_test))**2)
+
+# Вывод результатов
+print("L1 Regularization - Train MSE: {:.4f}, Test MSE: {:.4f}".format(train_mse_l1, test_mse_l1))
+print("L2 Regularization - Train MSE: {:.4f}, Test MSE: {:.4f}".format(train_mse_l2, test_mse_l2))
+print("ElasticNet Regularization - Train MSE: {:.4f}, Test MSE: {:.4f}".format(train_mse_en, test_mse_en))from sklearn.linear_model import Lasso, Ridge, ElasticNet
+from sklearn.metrics import mean_squared_error
+
+# Оптимальные значения lambda
+best_lambda_l1 = lambdas_l1[np.argmin(test_mse_l1)]
+best_lambda_l2 = lambdas_l2[np.argmin(test_mse_l2)]
+best_lambda_en = lambdas_en[np.argmin(test_mse_en)]
+
+# L1 регуляризация (Lasso)
+lasso = Lasso(alpha=best_lambda_l1)
+lasso.fit(x_train, y_train)
+y_train_pred = lasso.predict(x_train)
+y_test_pred = lasso.predict(x_test)
+mse_train_lasso = mean_squared_error(y_train, y_train_pred)
+mse_test_lasso = mean_squared_error(y_test, y_test_pred)
+
+# L2 регуляризация (Ridge)
+ridge = Ridge(alpha=best_lambda_l2)
+ridge.fit(x_train, y_train)
+y_train_pred = ridge.predict(x_train)
+y_test_pred = ridge.predict(x_test)
+mse_train_ridge = mean_squared_error(y_train, y_train_pred)
+mse_test_ridge = mean_squared_error(y_test, y_test_pred)
+
+# ElasticNet регуляризация
+elastic = ElasticNet(alpha=best_lambda_en, l1_ratio=0.5)
+elastic.fit(x_train, y_train)
+y_train_pred = elastic.predict(x_train)
+y_test_pred = elastic.predict(x_test)
+mse_train_elastic = mean_squared_error(y_train, y_train_pred)
+mse_test_elastic = mean_squared_error(y_test, y_test_pred)from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+
+class RegressionModel:
+    def __init__(self):
+        self.model = LinearRegression()
+
+    def fit(self, x_train, y_train):
+        self.model.fit(x_train, y_train)
+
+    def predict(self, x):
+        return self.model.predict(x)
+
+# Создаем и обучаем модель без регуляризации
+reg_model_no_reg = RegressionModel()
+reg_model_no_reg.fit(x_train, y_train)
+y_train_pred_no_reg = reg_model_no_reg.predict(x_train)
+y_test_pred_no_reg = reg_model_no_reg.predict(x_test)
+
+# Вычисляем метрики
+mse_train_no_reg = mean_squared_error(y_train, y_train_pred_no_reg)
+mse_test_no_reg = mean_squared_error(y_test, y_test_pred_no_reg)
+r2_train_no_reg = r2_score(y_train, y_train_pred_no_reg)
+r2_test_no_reg = r2_score(y_test, y_test_pred_no_reg)
+
+# Выводим результаты
+print("No Regularization - Train: MSE {}, R^2 {}".format(mse_train_no_reg, r2_train_no_reg))
+print("No Regularization - Test: MSE {}, R^2 {}".format(mse_test_no_reg, r2_test_no_reg))from sklearn.linear_model import Lasso, Ridge, ElasticNet
+
+class RegularizedRegressionModel:
+    def __init__(self, penalty, alpha):
+        if penalty not in ['l1', 'l2', 'elastic']:
+            raise ValueError("Penalty must be 'l1', 'l2', or 'elastic'")
+        self.penalty = penalty
+        self.alpha = alpha
+        self.model = self._get_model()
+
+    def _get_model(self):
+        if self.penalty == 'l1':
+            return Lasso(alpha=self.alpha)
+        elif self.penalty == 'l2':
+            return Ridge(alpha=self.alpha)
+        elif self.penalty == 'elastic':
+            return ElasticNet(alpha=self.alpha, l1_ratio=0.5)
+
+    def fit(self, x_train, y_train):
+        self.model.fit(x_train, y_train)
+
+    def predict(self, x):
+        return self.model.predict(x)
+
+# Определяем оптимальные значения alpha
+best_alpha_l1 = 0.01  # Замени на фактическое оптимальное значение
+best_alpha_l2 = 0.01  # Замени на фактическое оптимальное значение
+best_alpha_elastic = 0.01  # Замени на фактическое оптимальное значение
+
+# Создаем и обучаем модели с регуляризацией
+reg_model_l1 = RegularizedRegressionModel(penalty='l1', alpha=best_alpha_l1)
+reg_model_l2 = RegularizedRegressionModel(penalty='l2', alpha=best_alpha_l2)
+reg_model_elastic = RegularizedRegressionModel(penalty='elastic', alpha=best_alpha_elastic)
+
+reg_model_l1.fit(x_train, y_train)
+reg_model_l2.fit(x_train, y_train)
+reg_model_elastic.fit(x_train, y_train)
+
+# Предсказываем значения
+y_train_pred_l1 = reg_model_l1.predict(x_train)
+y_test_pred_l1 = reg_model_l1.predict(x_test)
+
+y_train_pred_l2 = reg_model_l2.predict(x_train)
+y_test_pred_l2 = reg_model_l2.predict(x_test)
+
+y_train_pred_elastic = reg_model_elastic.predict(x_train)
+y_test_pred_elastic = reg_model_elastic.predict(x_test)
+
+# Вычисляем метрики для моделей с регуляризацией
+mse_train_l1 = mean_squared_error(y_train, y_train_pred_l1)
+mse_test_l1 = mean_squared_error(y_test, y_test_pred_l1)
+r2_train_l1 = r2_score(y_train, y_train_pred_l1)
+r2_test_l1 = r2_score(y_test, y_test_pred_l1)
+
+mse_train_l2 = mean_squared_error(y_train, y_train_pred_l2)
+mse_test_l2 = mean_squared_error(y_test, y_test_pred_l2)
+r2_train_l2 = r2_score(y_train, y_train_pred_l2)
+r2_test_l2 = r2_score(y_test, y_test_pred_l2)
+
+mse_train_elastic = mean_squared_error(y_train, y_train_pred_elastic)
+mse_test_elastic = mean_squared_error(y_test, y_test_pred_elastic)
+r2_train_elastic = r2_score(y_train, y_train_pred_elastic)
+r2_test_elastic = r2_score(y_test, y_test_pred_elastic)
+
+# Выводим результаты
+print("\nL1 Regularization - Train: MSE {}, R^2 {}".format(mse_train_l1, r2_train_l1))
+print("L1 Regularization - Test: MSE {}, R^2 {}".format(mse_test_l1, r2_test_l1))
+
+print("\nL2 Regularization - Train: MSE {}, R^2 {}".format(mse_train_l2, r2_train_l2))
+print("L2 Regularization - Test: MSE {}, R^2 {}".format(mse_test_l2, r2_test_l2))
+
+print("\nElasticNet Regularization - Train: MSE {}, R^2 {}".format(mse_train_elastic, r2_train_elastic))
+print("ElasticNet Regularization - Test: MSE {}, R^2 {}".format(mse_test_elastic, r2_test_elastic))
+import matplotlib.pyplot as plt
+
+# Создаем списки для удобства построения графиков
+models = ['No Regularization', 'L1 Regularization', 'L2 Regularization', 'ElasticNet Regularization']
+train_mse = [mse_train_no_reg, mse_train_l1, mse_train_l2, mse_train_elastic]
+test_mse = [mse_test_no_reg, mse_test_l1, mse_test_l2, mse_test_elastic]
+train_r2 = [r2_train_no_reg, r2_train_l1, r2_train_l2, r2_train_elastic]
+test_r2 = [r2_test_no_reg, r2_test_l1, r2_test_l2, r2_test_elastic]
+
+# Графики MSE
+plt.figure(figsize=(10, 6))
+plt.subplot(1, 2, 1)
+plt.bar(models, train_mse, color='blue', alpha=0.7, label='Train MSE')
+plt.bar(models, test_mse, color='orange', alpha=0.7, label='Test MSE')
+plt.title('Mean Squared Error (MSE)')
+plt.ylabel('MSE')
+plt.legend()
+
+# Графики R^2
+plt.subplot(1, 2, 2)
+plt.bar(models, train_r2, color='green', alpha=0.7, label='Train R^2')
+plt.bar(models, test_r2, color='red', alpha=0.7, label='Test R^2')
+plt.title('R-squared (R^2)')
+plt.ylabel('R^2')
+plt.legend()
+
+# Отображаем графики
+plt.tight_layout()
+plt.show()
